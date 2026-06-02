@@ -2,7 +2,7 @@
 
 A fork of [Transmission](https://github.com/transmission/transmission) focused on one goal: **the GTK client can act as a remote control for an existing `transmission-daemon`**, the way `transmission-qt` already does.
 
-Upstream `transmission-gtk` always embeds its own BitTorrent session. This build adds a full HTTP RPC path so you can manage the **same daemon** already in use—without switching to Qt or the not so good looking remote-only app.
+Upstream `transmission-gtk` always embeds its own BitTorrent session. This build adds a full HTTP RPC path so you can manage the **same daemon** already in use, without switching to Qt or the not so good looking remote-only app.
 
 **Details:** [gtk/README.md](gtk/README.md) (config, build, feature list)
 
