@@ -1,0 +1,262 @@
+find_program(APPSTREAM appstreamcli)
+
+set(TCG_TARGET transmission-client-gtk)
+
+add_executable(${TCG_TARGET} WIN32)
+
+target_sources(${TCG_TARGET}
+    PRIVATE
+        RpcClient.cc
+        Actions.cc
+        Actions.h
+        Application.cc
+        Application.h
+        DetailsDialog.cc
+        DetailsDialog.h
+        Dialogs.cc
+        Dialogs.h
+        DynamicPropertyStore.h
+        FaviconCache.cc
+        FileList.cc
+        FileList.h
+        FilterBar.cc
+        FilterBar.h
+        FilterBase.h
+        FilterBase.hh
+        FilterListModel.h
+        FilterListModel.hh
+        Flags.h
+        FreeSpaceLabel.cc
+        FreeSpaceLabel.h
+        GtkCompat.h
+        HigWorkarea.h
+        IconCache.cc
+        IconCache.h
+        ListModelAdapter.cc
+        ListModelAdapter.h
+        main.cc
+        MainWindow.cc
+        MainWindow.h
+        MakeDialog.cc
+        MakeDialog.h
+        MessageLogWindow.cc
+        MessageLogWindow.h
+        Notify.cc
+        Notify.h
+        OptionsDialog.cc
+        OptionsDialog.h
+        PathButton.cc
+        PathButton.h
+        Percents.cc
+        Percents.h
+        Prefs.cc
+        Prefs.h
+        PrefsDialog.cc
+        PrefsDialog.h
+        RelocateDialog.cc
+        RelocateDialog.h
+        Session.cc
+        Session.h
+        SorterBase.h
+        SorterBase.hh
+        SortListModel.h
+        SortListModel.hh
+        StatsDialog.cc
+        StatsDialog.h
+        SystemTrayIcon.cc
+        SystemTrayIcon.h
+        Torrent.cc
+        Torrent.h
+        TorrentCellRenderer.cc
+        TorrentCellRenderer.h
+        TorrentFilter.cc
+        TorrentFilter.h
+        TorrentSorter.cc
+        TorrentSorter.h
+        Utils.cc
+        Utils.h
+        RpcClient.h
+        RemotePrefs.h)
+
+tr_allow_compile_if(
+    [=[[GTK_VERSION EQUAL 3]]=]
+        TorrentCellRenderer.cc)
+
+target_sources(${TCG_TARGET}
+    PRIVATE
+        ui/gtk3/AddTrackerDialog.ui
+        ui/gtk3/DetailsDialog.ui
+        ui/gtk3/EditTrackersDialog.ui
+        ui/gtk3/FilterBar.ui
+        ui/gtk3/MainWindow.ui
+        ui/gtk3/MakeDialog.ui
+        ui/gtk3/MakeProgressDialog.ui
+        ui/gtk3/MessageLogWindow.ui
+        ui/gtk3/OptionsDialog.ui
+        ui/gtk3/PrefsDialog.ui
+        ui/gtk3/RelocateDialog.ui
+        ui/gtk3/StatsDialog.ui
+        ui/gtk3/TorrentUrlChooserDialog.ui)
+
+source_group(Ui/GTK3
+    REGULAR_EXPRESSION [[ui/gtk3/.*\.ui$]])
+
+target_sources(${TCG_TARGET}
+    PRIVATE
+        ui/gtk4/AddTrackerDialog.ui
+        ui/gtk4/DetailsDialog.ui
+        ui/gtk4/EditTrackersDialog.ui
+        ui/gtk4/FilterBar.ui
+        ui/gtk4/MainWindow.ui
+        ui/gtk4/MakeDialog.ui
+        ui/gtk4/MakeProgressDialog.ui
+        ui/gtk4/MessageLogWindow.ui
+        ui/gtk4/OptionsDialog.ui
+        ui/gtk4/PrefsDialog.ui
+        ui/gtk4/RelocateDialog.ui
+        ui/gtk4/StatsDialog.ui
+        ui/gtk4/TorrentListItemCompact.ui
+        ui/gtk4/TorrentListItemFull.ui
+        ui/gtk4/TorrentUrlChooserDialog.ui)
+
+source_group(Ui/GTK4
+    REGULAR_EXPRESSION [[ui/gtk4/.*\.ui$]])
+
+if(WITH_APPINDICATOR)
+    set_property(
+        SOURCE SystemTrayIcon.cc
+        APPEND
+        PROPERTY COMPILE_DEFINITIONS
+            HAVE_APPINDICATOR)
+    if(APPINDICATOR_IS_AYATANA)
+        set_property(
+            SOURCE SystemTrayIcon.cc
+            APPEND
+            PROPERTY COMPILE_DEFINITIONS
+                APPINDICATOR_IS_AYATANA)
+    endif()
+endif()
+
+if(GTK_VERSION EQUAL 4)
+    set(UI_SUBDIR ui/gtk4)
+else()
+    set(UI_SUBDIR ui/gtk3)
+endif()
+
+tr_target_glib_resources(${TCG_TARGET}
+    transmission.gresource.xml
+    ${UI_SUBDIR}/transmission-ui.gresource.xml)
+
+if(ENABLE_NLS)
+    set(DESKTOP_FILE "${CMAKE_CURRENT_BINARY_DIR}/${TCG_TARGET}.desktop")
+    tr_gettext_msgfmt(${TCG_TARGET}
+        ${DESKTOP_FILE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/transmission-client-gtk.desktop.in)
+    target_sources(${TCG_TARGET}
+        PRIVATE
+            ${DESKTOP_FILE})
+
+    set(METAINFO_FILE "${CMAKE_CURRENT_BINARY_DIR}/${TCG_TARGET}.metainfo.xml")
+    tr_gettext_msgfmt(${TCG_TARGET}
+        ${METAINFO_FILE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/transmission-client-gtk.metainfo.xml.in)
+    target_sources(${TCG_TARGET}
+        PRIVATE
+            ${METAINFO_FILE})
+endif()
+
+target_compile_definitions(${TCG_TARGET}
+    PRIVATE
+        TRANSMISSIONLOCALEDIR="${CMAKE_INSTALL_FULL_LOCALEDIR}"
+        GETTEXT_PACKAGE="${TCG_TARGET}"
+        $<$<BOOL:${ENABLE_UTP}>:WITH_UTP>)
+
+if(NOT ENABLE_DEPRECATED)
+    target_compile_definitions(${TCG_TARGET}
+        PRIVATE
+            G_DISABLE_DEPRECATED
+            GDK_PIXBUF_DISABLE_DEPRECATED
+            GDK_DISABLE_DEPRECATED
+            GTK_DISABLE_DEPRECATED
+            PANGO_DISABLE_DEPRECATED
+            GDKMM_DISABLE_DEPRECATED
+            GIOMM_DISABLE_DEPRECATED
+            GLIBMM_DISABLE_DEPRECATED
+            GTKMM_DISABLE_DEPRECATED
+            PANGOMM_DISABLE_DEPRECATED
+            SIGCXX_DISABLE_DEPRECATED)
+endif()
+
+pkg_check_modules(SOUP3 REQUIRED IMPORTED_TARGET libsoup-3.0)
+
+target_compile_options(${TCG_TARGET}
+    PRIVATE
+        $<$<BOOL:${ENABLE_WERROR}>:$<IF:$<CXX_COMPILER_ID:MSVC>,/WX,-Werror>>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-exit-time-destructors>)
+
+target_include_directories(${TCG_TARGET}
+    PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR})
+
+target_include_directories(${TCG_TARGET} SYSTEM
+    PRIVATE
+        $<$<BOOL:${WITH_APPINDICATOR}>:${APPINDICATOR_INCLUDE_DIRS}>)
+
+target_link_libraries(${TCG_TARGET}
+    PRIVATE
+        ${TR_NAME}-app
+        ${TR_NAME}
+        transmission::gtk_impl
+        PkgConfig::SOUP3
+        fmt::fmt-header-only
+        $<$<BOOL:${WITH_APPINDICATOR}>:${APPINDICATOR_LIBRARIES}>)
+
+if(MSVC)
+    tr_append_target_property(${TCG_TARGET} LINK_FLAGS "/ENTRY:mainCRTStartup")
+endif()
+
+tr_win32_app_info(${TCG_TARGET}
+    "Transmission GTK+ Client"
+    "${TCG_TARGET}"
+    "${TCG_TARGET}.exe"
+    "${TR_NAME}.ico")
+
+install(
+    TARGETS ${TCG_TARGET}
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+set(PUBLIC_ICONS
+    hicolor_apps_scalable_transmission.svg
+    hicolor_apps_scalable_transmission-devel.svg
+    hicolor_apps_symbolic_transmission-symbolic.svg)
+
+set(ICON_NAME_REGEX "^([^_]+)_([^_]+)_([^_]+)_(.+)$")
+foreach(ICON ${PUBLIC_ICONS})
+    string(REGEX REPLACE ${ICON_NAME_REGEX} "\\1/\\3/\\2" ICON_DIR ${ICON})
+    string(REGEX REPLACE ${ICON_NAME_REGEX} "\\4" ICON_NAME ${ICON})
+    string(REGEX REPLACE "^transmission" "transmission-client-gtk" ICON_NAME ${ICON_NAME})
+    install(
+        FILES ${SOURCE_ICONS_DIR}/${ICON}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/${ICON_DIR}/
+        RENAME ${ICON_NAME})
+endforeach()
+
+if(INSTALL_DOC)
+    install(
+        FILES ${TCG_TARGET}.1
+        DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+endif()
+
+if(ENABLE_NLS)
+    install(
+        FILES ${DESKTOP_FILE}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(
+        FILES ${METAINFO_FILE}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+else()
+    install(
+        FILES transmission-client-gtk.desktop.in
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+        RENAME ${TCG_TARGET}.desktop)
+endif()
