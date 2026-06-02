@@ -1,101 +1,49 @@
-## About
+# transmission-client-gtk
 
-Transmission is a fast, easy, and free BitTorrent client. It comes in several flavors:
-  * A native macOS GUI application
-  * GTK+ and Qt GUI applications for Linux, BSD, etc.
-  * A Qt-based Windows-compatible GUI application
-  * A headless daemon for servers and routers
-  * A web UI for remote controlling any of the above
-  
-Visit https://transmissionbt.com/ for more information.
+A fork of [Transmission](https://github.com/transmission/transmission) focused on one goal: **the GTK client can act as a remote control for an existing `transmission-daemon`**, the way `transmission-qt` already does.
 
-## Documentation
+Upstream `transmission-gtk` always embeds its own BitTorrent session. This build adds a full HTTP RPC path so you can manage the **same daemon** that Sonarr, scripts, or systemd already use—without switching to Qt or a separate remote-only app.
 
-[Transmission's documentation](docs/README.md) is currently out-of-date, but the team has recently begun a new project to update it and is looking for volunteers. If you're interested, please feel free to submit pull requests!
+**Details:** [gtk/README.md](gtk/README.md) (config, build, feature list)
 
-## Command line interface notes
+## What makes this version special
 
-Transmission is fully supported in transmission-remote, the preferred cli client.
+| | **Stock `transmission-gtk`** | **`transmission-client-gtk` (this fork)** |
+|---|------------------------------|-------------------------------------------|
+| Default session | Embedded in-process daemon | Connect to a remote daemon over RPC |
+| Same torrents as `transmission-daemon` | No—separate config under `~/.config/transmission/` | Yes—when set to remote mode |
+| `remote-session-*` settings in `settings.json` | Ignored (Qt-only keys today) | Honored; drives connection |
+| RPC when not hosting | Errors: *"GTK+ client doesn't support connections to remote servers yet"* | `RpcClient` + remote code path in `Session` |
+| UI | Standard GTK shell | Same look and menus, wired for remote torrent/session ops |
+| Binary / config dir | `transmission-gtk` / `~/.config/transmission/` | `transmission-client-gtk` / `~/.config/transmission-client-gtk/` |
 
-Three standalone tools to examine, create, and edit .torrent files exist: transmission-show, transmission-create, and transmission-edit, respectively.
+**Why it exists:** On Linux, many setups run `transmission-daemon` as a system service (VPN rules, fixed download dir, automation). Stock GTK cannot attach to that daemon; Qt can, but you may prefer GTK. This fork ports the Qt remote model into the GTK codebase (libsoup RPC, polling, remote prefs) so one familiar UI controls the real server.
 
-Prior to development of transmission-remote, the standalone client transmission-cli was created. Limited to a single torrent at a time, transmission-cli is deprecated and exists primarily to support older hardware dependent upon it. In almost all instances, transmission-remote should be used instead.
+**Session modes** (Preferences → Remote): **Act as remote** (daemon client), **Act as host** (embedded + RPC), or **None** (local only). Remote mode requires an app restart after changing mode.
 
-Different distributions may choose to package any or all of these tools in one or more separate packages.
+## Quick start (remote mode)
 
-## Building
+1. Build `transmission-client-gtk` (see [gtk/README.md](gtk/README.md)).
+2. Ensure your daemon’s RPC is reachable (e.g. `127.0.0.1:9091`).
+3. Set `~/.config/transmission-client-gtk/settings.json`:
 
-Transmission has an Xcode project file (Transmission.xcodeproj) for building in Xcode.
-
-For a more detailed description, and dependencies, visit [How to Build Transmission](docs/Building-Transmission.md) in docs
-
-### Building a Transmission release from the command line
-
-```bash
-$ tar xf transmission-4.0.6.tar.xz
-$ cd transmission-4.0.6
-# Use -DCMAKE_BUILD_TYPE=RelWithDebInfo to build optimized binary with debug information. (preferred)
-# Use -DCMAKE_BUILD_TYPE=Release to build full optimized binary.
-$ cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
-$ cd build
-$ cmake --build .
-$ sudo cmake --install .
+```json
+{
+    "remote_session_enabled": true,
+    "remote_session_host": "127.0.0.1",
+    "remote_session_port": 9091,
+    "remote_session_requires_authentication": true,
+    "remote_session_username": "transmission",
+    "remote_session_password": "your-rpc-password",
+    "remote_session_url_base_path": "/transmission/",
+    "remote_session_https": false
+}
 ```
 
-### Building Transmission from the nightly builds
+4. Launch `transmission-client-gtk` — torrents and paths should match the daemon, not a stray local session.
 
-Download a tarball from https://build.transmissionbt.com/job/trunk-linux/ and follow the steps from the previous section.
+## Upstream
 
-If you're new to building programs from source code, this is typically easier than building from Git.
+Based on Transmission at `56442e2`. Licensed under the same terms as upstream (GPL). Not affiliated with the Transmission project.
 
-### Building Transmission from Git (first time)
-
-```bash
-$ git clone --recurse-submodules https://github.com/transmission/transmission Transmission
-$ cd Transmission
-# Use -DCMAKE_BUILD_TYPE=RelWithDebInfo to build optimized binary with debug information. (preferred)
-# Use -DCMAKE_BUILD_TYPE=Release to build full optimized binary.
-$ cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
-$ cd build
-$ cmake --build .
-$ sudo cmake --install .
-```
-
-### Building Transmission from Git (updating)
-
-```bash
-$ cd Transmission/build
-$ cmake --build . -t clean
-$ git submodule foreach --recursive git clean -xfd
-$ git pull --rebase --prune
-$ git submodule update --init --recursive
-$ cmake --build .
-$ sudo cmake --install .
-```
-
-## Contributing
-
-### Code Style
-
-You would want to setup your editor to make use of the .clang-format file located in the root of this repository and the eslint/prettier rules in web/package.json.
-
-If for some reason you are unwilling or unable to do so, there is a shell script which you can use: `./code_style.sh`
-
-### Translations
-
-See [language translations](docs/Translating.md).
-
-## Sponsors
-
-<table>
- <tbody>
-  <tr>
-   <td align="center"><img alt="[MacStadium]" src="https://uploads-ssl.webflow.com/5ac3c046c82724970fc60918/5c019d917bba312af7553b49_MacStadium-developerlogo.png" height="30"/></td>
-   <td>macOS CI builds are running on a M1 Mac Mini provided by <a href="https://www.macstadium.com/company/opensource">MacStadium</a></td>
-  </tr>
-  <tr>
-   <td align="center"><img alt="[SignPath]" src="https://avatars.githubusercontent.com/u/34448643" height="30"/></td>
-   <td>Free code signing on Windows provided by <a href="https://signpath.io/?utm_source=foundation&utm_medium=github&utm_campaign=transmission">SignPath.io</a>, certificate by <a href="https://signpath.org/?utm_source=foundation&utm_medium=github&utm_campaign=transmission">SignPath Foundation</a></td>
-  </tr>
- </tbody>
-</table>
+For stock Transmission docs, building all targets, and contributing upstream, see [transmission/transmission](https://github.com/transmission/transmission) and `docs/`.
